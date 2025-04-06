@@ -394,7 +394,7 @@ public:
 
     double frame_dur = 0.1, buffer_delay = 0.1, depth_map_dur = 0.2f;
     int    buffer_size = 300000, max_depth_map_num = 5;
-    int    hor_num = MAX_1D, ver_num = MAX_1D_HALF;
+    int    hor_num = MAX_1D, ver_num = MAX_1D_HALF; // hor_num水平圆周被分成多少份, ver_num垂直圆周被分成多少份
     float  hor_resolution_max = 0.02f, ver_resolution_max = 0.02f;
 
 

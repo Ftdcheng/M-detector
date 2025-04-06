@@ -1,0 +1,36 @@
+{
+  "$schema": "https://aka.ms/codetour-schema",
+  "title": "topic I/O",
+  "steps": [
+    {
+      "title": "消息输入/输出",
+      "description": "从里程计接收消息，从rqt_graph看是cloud_registered_body，疑似是雷达坐标系内去畸变的点云。"
+    },
+    {
+      "file": "src/dynfilter_with_odom.cpp",
+      "description": "发布以一帧数据为基准去除动态点的结果",
+      "line": 129
+    },
+    {
+      "file": "src/dynfilter_with_odom.cpp",
+      "description": "发布以点为基准的去动态点的点云",
+      "line": 130
+    },
+    {
+      "file": "src/dynfilter_with_odom.cpp",
+      "description": "接收无畸变的特征点云。",
+      "line": 78
+    },
+    {
+      "file": "src/dynfilter_with_odom.cpp",
+      "description": "接收里程计信息，主要是历史上走过哪些点，姿态如何，再记录一下时间戳",
+      "line": 64
+    },
+    {
+      "file": "src/dynfilter_with_odom.cpp",
+      "description": "对接收到的消息进行处理，对处理的结果进行发布",
+      "line": 86
+    }
+  ],
+  "ref": "main"
+}

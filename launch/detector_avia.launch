@@ -21,7 +21,7 @@
 
 	<node pkg="m_detector" type="dynfilter" name="dynfilter" output="screen" />
 	<group if="$(arg rviz)">
-	<node launch-prefix="nice" pkg="rviz" type="rviz" name="rviz" args="-d $(find m_detector)/rviz/demo.rviz" />
+	<node launch-prefix="nice" pkg="rviz" type="rviz" name="rviz_mdetector" args="-d $(find m_detector)/rviz/demo.rviz" />
 	</group>
 
   	  

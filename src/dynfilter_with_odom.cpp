@@ -53,10 +53,10 @@ double  lidar_end_time = 0;
 int     dataset = 0;
 int     cur_frame = 0;
 
-deque<M3D> buffer_rots;
-deque<V3D> buffer_poss;
-deque<double> buffer_times;
-deque<boost::shared_ptr<PointCloudXYZI>> buffer_pcs;
+deque<M3D> buffer_rots; // 里程计旋转
+deque<V3D> buffer_poss; // 里程计平移
+deque<double> buffer_times; // 里程计时间
+deque<boost::shared_ptr<PointCloudXYZI>> buffer_pcs; // 无畸变特征点云
 
 
 ros::Publisher pub_pcl_dyn, pub_pcl_dyn_extend, pub_pcl_std; 

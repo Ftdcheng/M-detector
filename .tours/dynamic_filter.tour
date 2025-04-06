@@ -1,0 +1,10 @@
+{
+  "$schema": "https://aka.ms/codetour-schema",
+  "title": "dynamic_filter",
+  "steps": [
+    {
+      "title": "动态过滤原理",
+      "description": "这里探讨如何动态过滤"
+    }
+  ]
+}

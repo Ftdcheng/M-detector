@@ -48,8 +48,8 @@ find_package(PythonLibs REQUIRED)
 # find_path(MATPLOTLIB_CPP_INCLUDE_DIRS "matplotlibcpp.h")
 
 set(TBB_DIR "/usr/local/tbb-2019_U8")
-include("/home/huajie/package/oneTBB-2019_U8/cmake/TBBBuild.cmake")
-tbb_build(TBB_ROOT "/home/huajie/package/oneTBB-2019_U8" CONFIG_DIR TBB_DIR)
+include("/root/hku_ws/src/oneTBB-2019_U8/cmake/TBBBuild.cmake")
+tbb_build(TBB_ROOT "/root/hku_ws/src/oneTBB-2019_U8" CONFIG_DIR TBB_DIR)
 find_package(catkin REQUIRED COMPONENTS
   geometry_msgs
   nav_msgs
