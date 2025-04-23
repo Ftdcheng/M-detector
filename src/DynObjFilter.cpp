@@ -176,17 +176,22 @@ void  DynObjFilter::init(ros::NodeHandle& nh)
 
 void  DynObjFilter::filter(PointCloudXYZI::Ptr feats_undistort, const M3D & rot_end, const V3D & pos_end, const double & scan_end_time)
 {
+    // ------------处理开始计时---------------
     double t00 = omp_get_wtime();
     time_search = time_research = time_search_0 = time_build = time_total = time_other0 = 0.0;
     time_interp1 = time_interp2 =0;
     int num_build = 0, num_search_0 = 0, num_research = 0;
     if (feats_undistort == NULL) return;
+
+    // 初始化
+    // 无畸变点云点数
     int size = feats_undistort->points.size();
     if (debug_en)
     {
         laserCloudSteadObj_hist.reset(new PointCloudXYZI());
         laserCloudSteadObj_hist->reserve(20*size);
     }
+    // 各种点云初始化
     dyn_tag_origin.clear();
     dyn_tag_origin.reserve(size);
     dyn_tag_origin.resize(size);
@@ -203,23 +208,8 @@ void  DynObjFilter::filter(PointCloudXYZI::Ptr feats_undistort, const M3D & rot_
     laserCloudDynObj_clus->reserve(size);
     laserCloudSteadObj_clus.reset(new PointCloudXYZI());
     laserCloudSteadObj_clus->reserve(size); 
-    ofstream out;
-    ofstream out_origin;
-    bool is_rec = false;
-    bool is_rec_origin = false;
-    if(is_set_path)
-    {
-        out.open(out_file, ios::out  | ios::binary);
-        out_origin.open(out_file_origin, ios::out | ios::binary);
-        if (out.is_open()) 
-        {
-            is_rec = true;
-        }
-        if (out_origin.is_open()) 
-        {
-            is_rec_origin = true;
-        }
-    }
+
+    // profile时间缓冲
     time_test1.reserve(size);
     time_test1.resize(size);
     time_test2.reserve(size);
@@ -241,8 +231,29 @@ void  DynObjFilter::filter(PointCloudXYZI::Ptr feats_undistort, const M3D & rot_
         time_map_cons[i] = 0.0;
         time_proj[i] = 0.0;
     }
-    int case2_num = 0;
+
+    // 运行时间profile输出文件初始化
+    ofstream out;
+    ofstream out_origin;
+    bool is_rec = false;
+    bool is_rec_origin = false;
+    if(is_set_path)
+    {
+        out.open(out_file, ios::out  | ios::binary);
+        out_origin.open(out_file_origin, ios::out | ios::binary);
+        if (out.is_open()) 
+        {
+            is_rec = true;
+        }
+        if (out_origin.is_open()) 
+        {
+            is_rec_origin = true;
+        }
+    }
+
+    //--------------初始化后的计时起点------------------
     double t0 = omp_get_wtime();
+    // 识别运行时依赖的变量初始化
     double time_case1 = 0, time_case2 = 0, time_case3 = 0;  
     pcl::PointCloud<PointType> raw_points_world;
     raw_points_world.reserve(size);
@@ -255,9 +266,10 @@ void  DynObjFilter::filter(PointCloudXYZI::Ptr feats_undistort, const M3D & rot_
     points.reserve(size);
     points.resize(size);
     point_soph* p = point_soph_pointers[cur_point_soph_pointers];
-    if(time_file != "") time_out << size << " "; //rec computation time
+    // 记录无畸变点云的规模
+    if(time_file != "") time_out << size << " "; 
+    // 如果你想串行执行，那么改成：std::for_each(std::execution::seq, index.begin(), index.end(), [&](const int &i)
     std::for_each(std::execution::par, index.begin(), index.end(), [&](const int &i)
-    // std::for_each(std::execution::seq, index.begin(), index.end(), [&](const int &i)
     {   
         p[i].reset();     
         V3D p_body(feats_undistort->points[i].x, feats_undistort->points[i].y, feats_undistort->points[i].z);
@@ -270,10 +282,12 @@ void  DynObjFilter::filter(PointCloudXYZI::Ptr feats_undistort, const M3D & rot_
         p[i].time = scan_end_time;
         p[i].local = p_body;
         p[i].intensity = feats_undistort->points[i].intensity;
+        
         if(dataset == 0 && fabs(intensity-666) < 10E-4)
         {
             p[i].is_distort = true;
         }
+
         if (InvalidPointCheck(p_body, intensity))
         {   
             p[i].dyn = INVALID;
@@ -698,8 +712,17 @@ void  DynObjFilter::Buffer2DepthMap(double cur_time)
     }
 }
 
+/**
+ * @brief 对p进行柱面投影，每个点的投影结果保存在p_spherical中，每个点最多存储HASH_PRIM个历史投影，如果缓存里有就不再计算。计算深度图索引时会先把全局坐标投影到局部坐标
+ * @param p 输入点
+ * @param depth_index 深度图索引，记录当前点缓存到哪了
+ * @param rot 旋转矩阵
+ * @param transl 平移向量
+ * @param p_spherical 输出点
+ */
 void  DynObjFilter::SphericalProjection(point_soph &p, int depth_index, const M3D &rot, const V3D &transl, point_soph &p_spherical)
 {
+    // 缓存里有的话就直接用，没有的话就重新计算
     if(fabs(p.last_vecs.at(depth_index%HASH_PRIM)[2]) > 10E-5)
     {       
         p_spherical.vec = p.last_vecs.at(depth_index%HASH_PRIM);
@@ -709,8 +732,8 @@ void  DynObjFilter::SphericalProjection(point_soph &p, int depth_index, const M3
     }
     else
     {
-        V3D p_proj(rot*(p.glob - transl));
-        p_spherical.GetVec(p_proj, hor_resolution_max, ver_resolution_max);
+        V3D p_proj(rot*(p.glob - transl)); // 投影到局部坐标系
+        p_spherical.GetVec(p_proj, hor_resolution_max, ver_resolution_max); // 计算柱面投影 
         p.last_vecs.at(depth_index%HASH_PRIM) = p_spherical.vec;
         p.last_positions.at(depth_index%HASH_PRIM)[0] = p_spherical.hor_ind;
         p.last_positions.at(depth_index%HASH_PRIM)[1] = p_spherical.ver_ind;
@@ -718,8 +741,12 @@ void  DynObjFilter::SphericalProjection(point_soph &p, int depth_index, const M3
     }
 }
 
+/**
+ * @brief 盲区检测，针对数据集1加了新条件
+ */
 bool  DynObjFilter::InvalidPointCheck(const V3D &body, const int intensity)
 {
+    // 盲区圆内是无效点，然后这个种类1的数据集的盲区半径是0.1
     if ((pow(body(0), 2) + pow(body(1), 2) + pow(body(2), 2)) < blind_dis*blind_dis || (dataset == 1 && fabs(body(0)) < 0.1 && fabs(body(1)) < 1.0) && fabs(body(2)) < 0.1)
     {
         return true;
@@ -730,6 +757,9 @@ bool  DynObjFilter::InvalidPointCheck(const V3D &body, const int intensity)
     }
 }
 
+/**
+ * @brief 给数据集0的特殊照顾，规定有些坐标范围内的点是无效的
+ */
 bool  DynObjFilter::SelfPointCheck(const V3D &body, const dyn_obj_flg dyn)
 {
     if (dataset == 0)

@@ -78,10 +78,10 @@ include_directories(
   ${PYTHON_INCLUDE_DIRS}
   include)
 
-generate_messages(
- DEPENDENCIES
- geometry_msgs
-)
+# generate_messages(
+#  DEPENDENCIES
+#  geometry_msgs
+# )
 
 catkin_package(
   CATKIN_DEPENDS geometry_msgs nav_msgs roscpp rospy std_msgs message_runtime

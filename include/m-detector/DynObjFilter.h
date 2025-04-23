@@ -73,8 +73,8 @@ struct point_soph
     bool         is_distort;
     V3D          last_closest;
     array<float, MAP_NUM> last_depth_interps = {};
-    array<V3F, HASH_PRIM> last_vecs = {};
-    array<Vector3i, HASH_PRIM> last_positions = {};   
+    array<V3F, HASH_PRIM> last_vecs = {}; // 上一帧的极坐标
+    array<Vector3i, HASH_PRIM> last_positions = {};   // 上一帧的深度图索引
     typedef boost::shared_ptr<point_soph> Ptr;
     point_soph(V3D & point, float & hor_resolution_max, float & ver_resolution_max)
     {
@@ -172,7 +172,13 @@ struct point_soph
 
     ~point_soph(){
     };
-
+    /**
+     * @brief 计算点的极坐标和深度图索引，point.vec三个坐标对应方位角、仰角、深度，hor_ind、ver_ind、position分别对应水平、垂直、深度图2D索引
+     * 
+     * @param point 输入点，将利用这个点的x,y,z进行转换
+     * @param hor_resolution_max 水平最大索引
+     * @param ver_resolution_max 垂直最大索引
+     */
     void GetVec(V3D & point, float & hor_resolution_max, float & ver_resolution_max)
     {
         vec(2)    = float(point.norm());
@@ -407,7 +413,7 @@ public:
     int    point_index = 0, time_ind = 0, max_ind = 1257, occlude_windows = 3;
     bool   debug_en = false;
     int    roll_num = 700, pitch_num = 350;
-    int    dataset = 0;
+    int    dataset = 0; // 数据集类型，0 -> avia? 
     float  self_x_f = 2.5, self_x_b = -1.5, self_y_l = 1.6, self_y_r = -1.6;
     float  fov_up = 2.0, fov_down = -23, fov_cut = -20, fov_left = 180, fov_right = -180;
     float  blind_dis = 0.3;

@@ -51,7 +51,7 @@ string  points_topic, odom_topic;
 string  out_folder, out_folder_origin;
 double  lidar_end_time = 0;
 int     dataset = 0;
-int     cur_frame = 0;
+int     cur_frame = 0; // 处理的点云帧数
 
 deque<M3D> buffer_rots; // 里程计旋转
 deque<V3D> buffer_poss; // 里程计平移
@@ -61,20 +61,28 @@ deque<boost::shared_ptr<PointCloudXYZI>> buffer_pcs; // 无畸变特征点云
 
 ros::Publisher pub_pcl_dyn, pub_pcl_dyn_extend, pub_pcl_std; 
 
+/**
+ * @brief 接收并压入传感器位姿、时间
+ */
 void OdomCallback(const nav_msgs::Odometry &cur_odom)
 {
     Eigen::Quaterniond cur_q;
     geometry_msgs::Quaternion tmp_q;
     tmp_q = cur_odom.pose.pose.orientation;
     tf::quaternionMsgToEigen(tmp_q, cur_q);
+
     cur_rot = cur_q.matrix();
     cur_pos << cur_odom.pose.pose.position.x, cur_odom.pose.pose.position.y, cur_odom.pose.pose.position.z;
     buffer_rots.push_back(cur_rot);
     buffer_poss.push_back(cur_pos);
+
     lidar_end_time = cur_odom.header.stamp.toSec();
     buffer_times.push_back(lidar_end_time);
 }
 
+/**
+ * @brief 接收一个无畸变点云，压入buffer_pcs
+ */
 void PointsCallback(const sensor_msgs::PointCloud2ConstPtr& msg_in)
 {
     boost::shared_ptr<PointCloudXYZI> feats_undistort(new PointCloudXYZI());
@@ -82,7 +90,9 @@ void PointsCallback(const sensor_msgs::PointCloud2ConstPtr& msg_in)
     buffer_pcs.push_back(feats_undistort); 
 }
 
-
+/**
+ * @brief 每隔一段时间从缓冲队列里拿出一个点云帧和它对应的位姿进行动态点识别
+ */
 void TimerCallback(const ros::TimerEvent& e)
 {
     if(buffer_pcs.size() > 0 && buffer_poss.size() > 0 && buffer_rots.size() > 0 && buffer_times.size() > 0)
@@ -95,6 +105,8 @@ void TimerCallback(const ros::TimerEvent& e)
         buffer_poss.pop_front();
         auto cur_time = buffer_times.at(0);
         buffer_times.pop_front();
+
+        // 初始化两个输出文件
         string file_name = out_folder;
         stringstream ss;
         ss << setw(6) << setfill('0') << cur_frame ;
@@ -106,10 +118,13 @@ void TimerCallback(const ros::TimerEvent& e)
         file_name_origin += sss.str(); 
         file_name_origin.append(".label");
 
+        // 设置输出路径
         if(file_name.length() > 15 || file_name_origin.length() > 15)
             DynObjFilt->set_path(file_name, file_name_origin);
 
+        // 进行动态点过滤
         DynObjFilt->filter(cur_pc, cur_rot, cur_pos, cur_time);
+        // 发布识别出来的动态点
         DynObjFilt->publish_dyn(pub_pcl_dyn, pub_pcl_dyn_extend, pub_pcl_std, cur_time);
         cur_frame ++;
     }
